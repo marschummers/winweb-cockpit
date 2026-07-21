@@ -7,9 +7,10 @@ interface Point {
 }
 
 // Rundet auf max. 2 Nachkommastellen (Divisionen erzeugen sonst Fließkomma-Artefakte wie
-// 84.10000000000001).
+// 84.10000000000001) und formatiert mit deutschem Tausenderpunkt (202.962 statt 202962).
 function formatValue(value: number): string {
-  return (Math.round(value * 100) / 100).toString()
+  const rounded = Math.round(value * 100) / 100
+  return rounded.toLocaleString('de-DE', { maximumFractionDigits: 2 })
 }
 
 export default function LineChart({

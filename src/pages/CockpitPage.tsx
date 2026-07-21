@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { ebitMargin, getLatestMonth, percentChange, sortByPeriod } from '../lib/finance'
+import { ebitMargin, getLatestMonth, getPreviousMonth, percentChange, sortByPeriod } from '../lib/finance'
 import { unweightedPipeline, weightedPipeline } from '../lib/sales'
 import { isOverBudget } from '../lib/projects'
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedPercent } from '../lib/format'
-import { formatDateTime, formatMonthYearShort, periodKeyToLabel } from '../lib/date'
+import { formatMonthYearShort, periodKeyToLabel } from '../lib/date'
+import { describeDataStatus } from '../lib/dataStatus'
+import { isYearEndMonth } from '../lib/ratios'
 import LineChart from '../components/LineChart'
 
 export default function CockpitPage() {
@@ -18,8 +20,10 @@ export default function CockpitPage() {
 
   const sortedMonths = sortByPeriod(financeMonths)
   const latest = getLatestMonth(financeMonths)
-  const revenueDelta = latest ? percentChange(latest.revenue, latest.revenuePlan) : null
-  const ebitDelta = latest ? percentChange(latest.ebit, latest.ebitPlan) : null
+  const previousMonth = latest ? getPreviousMonth(sortedMonths, latest) : null
+
+  const revenueDelta = latest && previousMonth ? percentChange(latest.revenue, previousMonth.revenue) : null
+  const ebitDelta = latest && previousMonth ? percentChange(latest.ebit, previousMonth.ebit) : null
 
   const activeProjects = projects.filter((p) => p.status === 'aktiv')
   const overBudgetCount = activeProjects.filter(isOverBudget).length
@@ -33,9 +37,7 @@ export default function CockpitPage() {
     <div className="page">
       <p className="screen-eyebrow">Cockpit</p>
       <h1>Überblick</h1>
-      <p className="data-status">
-        Datenstand: {appMeta?.demoSeededAt ? formatDateTime(appMeta.demoSeededAt) : '–'} (Demodaten)
-      </p>
+      <p className="data-status">Datenstand: {describeDataStatus(appMeta)}</p>
 
       {latest && (
         <div className="kpi-grid">
@@ -47,11 +49,16 @@ export default function CockpitPage() {
               {ebitDelta !== null && (
                 <>
                   {' · '}
-                  <span className={`kpi-delta ${ebitDelta >= 0 ? 'up' : 'down'}`}>{formatSignedPercent(ebitDelta)}</span>{' '}
-                  ggü. Plan
+                  <span className={`kpi-delta ${Math.round(ebitDelta) >= 0 ? 'up' : 'down'}`}>{formatSignedPercent(ebitDelta)}</span>{' '}
+                  ggü. Vormonat
                 </>
               )}
             </p>
+            {latest && isYearEndMonth(latest.periodKey) && (
+              <p className="hint-warn" style={{ margin: '0.3rem 0 0', fontSize: '0.76rem' }}>
+                Jahreswechsel – eingeschränkt aussagekräftig
+              </p>
+            )}
           </div>
 
           <div className="kpi-card">
@@ -59,8 +66,8 @@ export default function CockpitPage() {
             <span className="kpi-value">{formatCurrencyCompact(latest.revenue)}</span>
             {revenueDelta !== null && (
               <p className="kpi-sub">
-                <span className={`kpi-delta ${revenueDelta >= 0 ? 'up' : 'down'}`}>{formatSignedPercent(revenueDelta)}</span>{' '}
-                ggü. Plan
+                <span className={`kpi-delta ${Math.round(revenueDelta) >= 0 ? 'up' : 'down'}`}>{formatSignedPercent(revenueDelta)}</span>{' '}
+                ggü. Vormonat
               </p>
             )}
           </div>

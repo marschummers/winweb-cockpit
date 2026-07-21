@@ -1,4 +1,5 @@
 import type { FinanceMonth } from '../db/types'
+import { shiftPeriodKey } from './date'
 
 // Monate liegen in der DB unsortiert vor (Dexie liefert Einfüge-/Index-Reihenfolge, nicht
 // zwingend chronologisch) - für Verlauf und "aktueller Monat" wird explizit nach periodKey
@@ -16,6 +17,14 @@ export function getPreviousMonth(months: FinanceMonth[], current: FinanceMonth):
   const sorted = sortByPeriod(months)
   const idx = sorted.findIndex((m) => m.id === current.id)
   return idx > 0 ? sorted[idx - 1] : null
+}
+
+// Exakt derselbe Kalendermonat des Vorjahres (über periodKey, nicht Array-Index) - anders als
+// bei getPreviousMonth reicht "12 Einträge zurück" hier nicht, weil bei Lücken in den Daten
+// sonst der falsche Monat verglichen würde.
+export function getSamePeriodLastYear(months: FinanceMonth[], current: FinanceMonth): FinanceMonth | null {
+  const targetKey = shiftPeriodKey(current.periodKey, -12)
+  return months.find((m) => m.periodKey === targetKey) ?? null
 }
 
 // Relative Veränderung in Prozent, z.B. für "ggü. Vormonat". null, wenn kein Vergleichswert

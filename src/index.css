@@ -72,7 +72,8 @@ button {
 }
 
 input,
-select {
+select,
+textarea {
   font: inherit;
   color: var(--text);
   background: var(--bg-sunken);
@@ -85,8 +86,19 @@ select {
   box-sizing: border-box;
 }
 
+textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
 a {
   color: inherit;
+}
+
+input[type='checkbox'] {
+  width: auto;
+  accent-color: var(--accent);
+  padding: 0;
 }
 
 /* Zahlen/Kennzahlen: feste Ziffernbreite, damit sich Werte beim Wechseln nicht verschieben

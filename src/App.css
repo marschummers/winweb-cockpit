@@ -148,6 +148,12 @@
   cursor: default;
 }
 
+a.secondary-button {
+  display: inline-block;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
 /* --- Karten allgemein ------------------------------------------------ */
 
 .card-list {
@@ -409,6 +415,27 @@
   margin: 0 0 0.5rem;
 }
 
+.progress-card.warn {
+  border-color: var(--warn);
+}
+
+.hint-error {
+  color: var(--bad);
+}
+
+.hint-warn {
+  color: var(--warn);
+}
+
+.file-picker-label {
+  display: block;
+  text-align: center;
+}
+
+.month-check-row {
+  cursor: pointer;
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -444,6 +471,10 @@
   gap: 0.5rem;
 }
 
+.finance-stat-grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .finance-stat {
   min-width: 0;
 }
@@ -464,4 +495,47 @@
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
+}
+
+.finance-stat-value.bad {
+  color: var(--bad);
+}
+
+.finance-stat-subvalue {
+  display: block;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+  color: var(--text-faint);
+  margin-top: 0.15rem;
+}
+
+.card-block.year-end {
+  border-color: var(--warn);
+}
+
+.month-comment {
+  min-height: 2.4rem;
+  font-size: 0.85rem;
+}
+
+.ratio-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ratio-legend-item {
+  font-size: 0.82rem;
+}
+
+.ratio-legend-item strong {
+  color: var(--text);
+}
+
+.ratio-legend-item .guideline {
+  display: block;
+  color: var(--text-faint);
+  font-size: 0.76rem;
+  margin-top: 0.1rem;
 }

@@ -6,10 +6,8 @@ function rnd(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-// Erzeugt 13 BWA-Monate (aktueller Monat + 12 zurück), damit Jahresverlauf- und
-// Vorjahresvergleich-Ansichten schon in der Demo genug Datenpunkte haben. Plan-Werte folgen
-// einem glatteren Trend als die tatsächlichen Werte, damit realistische Über-/Unterdeckungen
-// entstehen statt eines immer exakt passenden Plans.
+// Erzeugt 13 BWA-Monate (aktueller Monat + 12 zurück), damit Monats- und
+// Vorjahresvergleich-Ansichten schon in der Demo genug Datenpunkte haben.
 function buildFinanceMonths(): FinanceMonth[] {
   const months: FinanceMonth[] = [];
   const baseRevenue = 178000;
@@ -18,14 +16,18 @@ function buildFinanceMonths(): FinanceMonth[] {
   for (let i = 12; i >= 0; i--) {
     const trend = baseRevenue + monthlyGrowth * (12 - i);
     const revenue = Math.round(trend + rnd(-13000, 13000));
-    const revenuePlan = Math.round(trend + rnd(-4000, 4000));
     // Personal- und Sachkosten als Anteil vom Umsatz (statt fixer Absolutwerte), damit die
-    // EBIT-Marge unabhängig vom Umsatzniveau in einer realistischen Bandbreite (~10-20%)
-    // bleibt - sonst driftet der Plan-Ist-Vergleich ins Absurde.
+    // EBIT-Marge unabhängig vom Umsatzniveau in einer realistischen Bandbreite (~10-20%) bleibt.
     const costs = Math.round(revenue * rnd(0.36, 0.41));
     const personnelCosts = Math.round(revenue * rnd(0.42, 0.47));
     const ebit = revenue - costs - personnelCosts;
-    const ebitPlan = Math.round(revenuePlan * 0.15);
+
+    // Nur für die Kennzahlen EBIT-Quote/GK-Rohertrag/Personalquote gebraucht (siehe
+    // lib/ratios.ts) - grossProfit so gewählt, dass GK/Rohertrag meist im Richtwert
+    // 0,70-0,80 liegt, gelegentlich knapp darüber/darunter (realistische Schwankung).
+    const totalOutput = Math.round(revenue + rnd(0, 3000));
+    const grossProfit = Math.round((costs + personnelCosts) / rnd(0.68, 0.84));
+    const resultBeforeTax = Math.round(ebit - rnd(500, 3000));
 
     months.push({
       id: newId(),
@@ -34,8 +36,9 @@ function buildFinanceMonths(): FinanceMonth[] {
       costs,
       personnelCosts,
       ebit,
-      revenuePlan,
-      ebitPlan,
+      totalOutput,
+      grossProfit,
+      resultBeforeTax,
     });
   }
   return months;

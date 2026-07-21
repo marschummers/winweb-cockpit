@@ -1,6 +1,7 @@
 // BWA-Kennzahlen eines Monats. Beträge in vollen Euro als Zahl (Math.round genügt für dieses
 // interne Management-Cockpit - anders als bei einer Buchhaltung spielt eine Cent-Rundungs-
-// differenz hier keine Rolle). periodKey ist der Monat im Format 'YYYY-MM'.
+// differenz hier keine Rolle). periodKey ist der Monat im Format 'YYYY-MM'. Es gibt bewusst
+// keine Planwerte - nur Monats- und Vorjahresvergleiche auf Basis der Ist-Zahlen.
 export interface FinanceMonth {
   id: string;
   periodKey: string;
@@ -8,9 +9,14 @@ export interface FinanceMonth {
   costs: number;
   personnelCosts: number;
   ebit: number;
-  // Planwerte fehlen, solange für den Monat keine Planung hinterlegt wurde.
-  revenuePlan?: number;
-  ebitPlan?: number;
+  // Zusätzliche BWA-Zeilen, nur für die Kennzahlen EBIT-Quote/GK-Rohertrag/Personalquote
+  // gebraucht (siehe lib/ratios.ts). 0, wenn die Zeile beim Import nicht gefunden wurde.
+  totalOutput: number;
+  grossProfit: number;
+  resultBeforeTax: number;
+  // Freitext-Notiz zur Interpretation des Monats (z.B. "Sonderausgabe Messe"). Rein manuell
+  // gepflegt, kommt nie aus dem CSV-Import.
+  comment?: string;
 }
 
 export const DEAL_PHASES = ['Lead', 'Qualifiziert', 'Angebot', 'Verhandlung', 'Gewonnen', 'Verloren'] as const;
