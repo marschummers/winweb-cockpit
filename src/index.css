@@ -1,0 +1,97 @@
+:root {
+  /* Grundflächen: sehr dunkles, warmes Anthrazit statt reinem Schwarz */
+  --bg: #17140f;
+  --bg-elevated: #211e19;
+  --bg-sunken: #100e0b;
+  --bg-accent-tint: #241d15;
+
+  /* Text: warmes Off-White statt reinem Weiß, mit zwei gedämpften Stufen für Sekundärtext */
+  --text: #ece5d8;
+  --text-dim: #a89e8e;
+  --text-faint: #766c5d;
+
+  --border: #383026;
+  --border-soft: #2a251e;
+
+  /* Kupfer/Bronze als einziger gezielter Akzent – trägt Hierarchie, keine Deko-Linie */
+  --accent: #b97c45;
+  --accent-strong: #d6934f;
+  --accent-soft: rgba(185, 124, 69, 0.16);
+  --accent-text: #201509;
+
+  /* Status ausschließlich für Kennzahlen-Abweichungen, nie dekorativ */
+  --good: #7c9a6f;
+  --bad: #bf6152;
+  --warn: #c4a22e;
+
+  --radius-card: 14px;
+  --radius-control: 9px;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  font: 16px/1.45 -apple-system, system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  touch-action: manipulation;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0.3rem 0 1rem;
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+}
+
+h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+  color: var(--text-dim);
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+input,
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 0.6rem 0.7rem;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+}
+
+/* Zahlen/Kennzahlen: feste Ziffernbreite, damit sich Werte beim Wechseln nicht verschieben
+   und Spalten aus Ziffern sauber untereinander stehen (BWA-/Pipeline-Tabellen). */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
