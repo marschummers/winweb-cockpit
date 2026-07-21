@@ -59,7 +59,11 @@ export default function SalesPage() {
                 <div key={c.customerNumber} className="card">
                   <div>
                     <span className="card-title">{c.searchName || c.customerNumber}</span>
-                    <span className="card-subtitle">{c.rawActivityType}</span>
+                    {c.lastContact && (
+                      <span className="card-subtitle">
+                        Letzter Kontakt: vor {c.lastContact.daysAgo} Tagen ({c.lastContact.activityType})
+                      </span>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <span className={`num ${c.daysSinceLastActivity > STALE_THRESHOLD_DAYS ? 'hint-error' : ''}`} style={{ fontWeight: 600, display: 'block' }}>
@@ -99,8 +103,9 @@ export default function SalesPage() {
             <span>Unbekannte Aktivitäten · {grouped.unbekannt.length}</span>
           </div>
           <p className="hint">
-            Diese Kunden haben eine Aktivitätsbezeichnung, die keiner Phase zugeordnet werden
-            konnte - vermutlich hat sich das Journal-Format geändert.
+            Für diese Kunden gibt es noch keine Aktivität, die einer Phase zugeordnet werden
+            konnte (z.B. bisher nur Kontaktaktivitäten wie E-Mail/Anruf, oder ein neuer,
+            noch unbekannter Aktivitätstyp im Journal).
           </p>
           <div className="card-list">
             {grouped.unbekannt.map((c) => (

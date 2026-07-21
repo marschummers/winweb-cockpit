@@ -69,17 +69,27 @@ export function parsePriceFromTitle(title: string): number | null {
   return Number.isNaN(value) ? null : Math.round(value)
 }
 
+export interface LastContact {
+  activityType: string
+  daysAgo: number
+}
+
 export interface CustomerFunnelStatus {
   customerNumber: string
   searchName: string
   phase: FunnelPhase
-  // Die rohe Aktivitätsbezeichnung der aktuellsten Aktivität, z.B. "Präsentation online" -
-  // nützlich in der Anzeige, auch wenn "phase" schon die normalisierte Kategorie ist.
+  // Die rohe Aktivitätsbezeichnung der Aktivität, die die Phase bestimmt hat, z.B.
+  // "Präsentation online" - nützlich in der Anzeige, auch wenn "phase" schon die
+  // normalisierte Kategorie ist.
   rawActivityType: string
   lastActivityDate: number
   daysSinceLastActivity: number
   price: number | null
   title: string
+  // Gesetzt, wenn es NACH der phasenbestimmenden Aktivität noch einen reinen Kontakt gab
+  // (z.B. eine E-Mail oder ein Anruf, die keine Phase auslösen) - sonst null, um auf der
+  // Kundenkarte keine Information doppelt anzuzeigen (siehe SalesPage.tsx).
+  lastContact: LastContact | null
 }
 
 // Nur die Felder, die für die Aggregation tatsächlich gebraucht werden - so lässt sich die
@@ -87,31 +97,47 @@ export interface CustomerFunnelStatus {
 // frisch geparsten Import-Zeilen (noch ohne id) aufrufen.
 type ActivityLike = Pick<SalesActivity, 'activityDate' | 'activityType' | 'customerNumber' | 'searchName' | 'title'>
 
-// Aggregiert Rohaktivitäten pro Kunden-Nr.: die zeitlich NEUESTE Aktivität eines Kunden
-// bestimmt seine aktuelle Phase (und damit auch, ob er "verloren" ist) - ältere Aktivitäten
-// desselben Kunden fließen nicht mehr ein, sie waren nur Zwischenstationen auf dem Weg dahin.
+function daysBetween(now: number, timestamp: number): number {
+  return Math.floor((now - timestamp) / (24 * 60 * 60 * 1000))
+}
+
+// Aggregiert Rohaktivitäten pro Kunden-Nr. Die Phase wird NICHT einfach von der zeitlich
+// neuesten Aktivität übernommen, sondern von der neuesten Aktivität, die sich überhaupt einer
+// Phase zuordnen lässt - reine Kontaktaktivitäten wie E-Mails oder Anrufe (falls das Journal
+// künftig um sie erweitert wird) verändern die Phase nicht, sonst würde ein Kunde mitten im
+// Angebot nach einer Nachfass-Mail fälschlich in "Unbekannt" rutschen. Der tatsächlich
+// jüngste Kontakt (egal welchen Typs) wird trotzdem festgehalten (lastContact), falls er
+// neuer ist als die phasenbestimmende Aktivität.
 export function computeCustomerFunnelStatuses(activities: ActivityLike[], now = Date.now()): CustomerFunnelStatus[] {
-  const latestByCustomer = new Map<string, ActivityLike>()
+  const byCustomer = new Map<string, ActivityLike[]>()
   for (const activity of activities) {
-    const current = latestByCustomer.get(activity.customerNumber)
-    if (!current || activity.activityDate > current.activityDate) {
-      latestByCustomer.set(activity.customerNumber, activity)
-    }
+    const list = byCustomer.get(activity.customerNumber)
+    if (list) list.push(activity)
+    else byCustomer.set(activity.customerNumber, [activity])
   }
 
-  return Array.from(latestByCustomer.values()).map((activity) => {
-    const daysSinceLastActivity = Math.floor((now - activity.activityDate) / (24 * 60 * 60 * 1000))
-    return {
-      customerNumber: activity.customerNumber,
-      searchName: activity.searchName,
-      phase: mapActivityTypeToPhase(activity.activityType),
-      rawActivityType: activity.activityType,
-      lastActivityDate: activity.activityDate,
-      daysSinceLastActivity,
-      price: parsePriceFromTitle(activity.title),
-      title: activity.title,
-    }
-  })
+  const statuses: CustomerFunnelStatus[] = []
+  for (const customerActivities of byCustomer.values()) {
+    const sorted = [...customerActivities].sort((a, b) => b.activityDate - a.activityDate)
+    const mostRecentContact = sorted[0]
+    const phaseActivity = sorted.find((a) => mapActivityTypeToPhase(a.activityType) !== 'unbekannt') ?? mostRecentContact
+
+    const hasNewerContact = mostRecentContact.activityDate > phaseActivity.activityDate
+    statuses.push({
+      customerNumber: phaseActivity.customerNumber,
+      searchName: phaseActivity.searchName,
+      phase: mapActivityTypeToPhase(phaseActivity.activityType),
+      rawActivityType: phaseActivity.activityType,
+      lastActivityDate: phaseActivity.activityDate,
+      daysSinceLastActivity: daysBetween(now, phaseActivity.activityDate),
+      price: parsePriceFromTitle(phaseActivity.title),
+      title: phaseActivity.title,
+      lastContact: hasNewerContact
+        ? { activityType: mostRecentContact.activityType, daysAgo: daysBetween(now, mostRecentContact.activityDate) }
+        : null,
+    })
+  }
+  return statuses
 }
 
 export function groupByPhase(statuses: CustomerFunnelStatus[]): Record<FunnelPhase, CustomerFunnelStatus[]> {

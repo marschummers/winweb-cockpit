@@ -73,7 +73,7 @@ export function parseSalesJournalCsv(text: string): ParsedSalesImport {
 
   if (unmappedTypes.size > 0) {
     warnings.push(
-      `Unbekannte Aktivitätstypen gefunden (werden als "Unbekannt" gezählt): ${Array.from(unmappedTypes).join(', ')}`,
+      `Aktivitätstypen ohne Phasen-Zuordnung gefunden (z.B. Kontaktaktivitäten wie E-Mail/Anruf - das ist normal, sie verändern nur nicht die Phase): ${Array.from(unmappedTypes).join(', ')}`,
     )
   }
 
