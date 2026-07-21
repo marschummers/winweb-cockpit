@@ -23,3 +23,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Echte BWA-/Finanzdaten dürfen nie ins Repo gelangen (das Repo ist öffentlich). CSV-Exporte
+# zum lokalen Testen des Imports (Phase 2) gehören hierher, nicht direkt ins Projekt.
+*.csv
+/data-samples/
