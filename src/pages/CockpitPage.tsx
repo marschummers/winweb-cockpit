@@ -2,21 +2,21 @@ import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import { ebitMargin, getLatestMonth, getPreviousMonth, percentChange, sortByPeriod } from '../lib/finance'
-import { unweightedPipeline, weightedPipeline } from '../lib/sales'
+import { computeCustomerFunnelStatuses, FUNNEL_PHASES } from '../lib/salesFunnel'
 import { isOverBudget } from '../lib/projects'
 import { formatCurrency, formatCurrencyCompact, formatPercent, formatSignedPercent } from '../lib/format'
 import { formatMonthYearShort, periodKeyToLabel } from '../lib/date'
-import { describeDataStatus } from '../lib/dataStatus'
+import { describeFinanceDataStatus } from '../lib/dataStatus'
 import { isYearEndMonth } from '../lib/ratios'
 import LineChart from '../components/LineChart'
 
 export default function CockpitPage() {
   const financeMonths = useLiveQuery(() => db.financeMonths.toArray(), [])
-  const deals = useLiveQuery(() => db.deals.toArray(), [])
+  const salesActivities = useLiveQuery(() => db.salesActivities.toArray(), [])
   const projects = useLiveQuery(() => db.projects.toArray(), [])
   const appMeta = useLiveQuery(() => db.appMeta.get('singleton'), [])
 
-  if (!financeMonths || !deals || !projects) return null
+  if (!financeMonths || !salesActivities || !projects) return null
 
   const sortedMonths = sortByPeriod(financeMonths)
   const latest = getLatestMonth(financeMonths)
@@ -24,6 +24,12 @@ export default function CockpitPage() {
 
   const revenueDelta = latest && previousMonth ? percentChange(latest.revenue, previousMonth.revenue) : null
   const ebitDelta = latest && previousMonth ? percentChange(latest.ebit, previousMonth.ebit) : null
+
+  const funnelStatuses = computeCustomerFunnelStatuses(salesActivities)
+  const openInterestCount = funnelStatuses.filter((s) => (FUNNEL_PHASES as readonly string[]).includes(s.phase) && s.phase !== 'kunde').length
+  const staleInterestCount = funnelStatuses.filter(
+    (s) => s.phase !== 'kunde' && s.phase !== 'verloren' && s.daysSinceLastActivity > 30,
+  ).length
 
   const activeProjects = projects.filter((p) => p.status === 'aktiv')
   const overBudgetCount = activeProjects.filter(isOverBudget).length
@@ -37,7 +43,7 @@ export default function CockpitPage() {
     <div className="page">
       <p className="screen-eyebrow">Cockpit</p>
       <h1>Überblick</h1>
-      <p className="data-status">Datenstand: {describeDataStatus(appMeta)}</p>
+      <p className="data-status">Datenstand: {describeFinanceDataStatus(appMeta)}</p>
 
       {latest && (
         <div className="kpi-grid">
@@ -73,9 +79,15 @@ export default function CockpitPage() {
           </div>
 
           <div className="kpi-card">
-            <span className="kpi-label">Pipeline gewichtet</span>
-            <span className="kpi-value">{formatCurrencyCompact(weightedPipeline(deals))}</span>
-            <p className="kpi-sub">von {formatCurrencyCompact(unweightedPipeline(deals))} offen</p>
+            <span className="kpi-label">Offene Interessenten</span>
+            <span className="kpi-value">{openInterestCount}</span>
+            <p className="kpi-sub">
+              {staleInterestCount > 0 ? (
+                <span className="kpi-delta down">{staleInterestCount} ohne Fortschritt &gt;30 Tage</span>
+              ) : (
+                'alle kürzlich bewegt'
+              )}
+            </p>
           </div>
 
           <div className="kpi-card">

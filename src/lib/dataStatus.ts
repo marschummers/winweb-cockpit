@@ -5,9 +5,20 @@ import { formatDateTime } from './date'
 // Beginn einmal Demodaten vorhanden waren, zählt ab dem ersten Import nur noch dessen
 // Zeitpunkt (lastFinanceImportAt), da importFinanceMonths() die Demodaten dann bereits
 // gelöscht hat.
-export function describeDataStatus(appMeta: AppMeta | undefined): string {
+export function describeFinanceDataStatus(appMeta: AppMeta | undefined): string {
   if (appMeta?.lastFinanceImportAt) {
     return `${formatDateTime(appMeta.lastFinanceImportAt)} (BWA-Import)`
+  }
+  if (appMeta?.demoSeededAt) {
+    return `${formatDateTime(appMeta.demoSeededAt)} (Demodaten)`
+  }
+  return 'keine Daten'
+}
+
+// Analog für die Vertriebsseite: ein echter Journal-Import überschreibt dauerhaft die Anzeige.
+export function describeSalesDataStatus(appMeta: AppMeta | undefined): string {
+  if (appMeta?.lastSalesImportAt) {
+    return `${formatDateTime(appMeta.lastSalesImportAt)} (Aktivitätenjournal)`
   }
   if (appMeta?.demoSeededAt) {
     return `${formatDateTime(appMeta.demoSeededAt)} (Demodaten)`

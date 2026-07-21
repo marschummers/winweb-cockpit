@@ -4,6 +4,7 @@ import CockpitPage from './pages/CockpitPage'
 import FinancePage from './pages/FinancePage'
 import FinanceImportPage from './pages/FinanceImportPage'
 import SalesPage from './pages/SalesPage'
+import SalesImportPage from './pages/SalesImportPage'
 import ProjectsPage from './pages/ProjectsPage'
 import SettingsPage from './pages/SettingsPage'
 import NavIcon from './components/NavIcon'
@@ -28,6 +29,7 @@ function App() {
               <Route path="/finanzen" element={<FinancePage />} />
               <Route path="/finanzen/import" element={<FinanceImportPage />} />
               <Route path="/vertrieb" element={<SalesPage />} />
+              <Route path="/vertrieb/import" element={<SalesImportPage />} />
               <Route path="/projekte" element={<ProjectsPage />} />
               <Route path="/einstellungen" element={<SettingsPage />} />
             </Routes>

@@ -19,25 +19,21 @@ export interface FinanceMonth {
   comment?: string;
 }
 
-export const DEAL_PHASES = ['Lead', 'Qualifiziert', 'Angebot', 'Verhandlung', 'Gewonnen', 'Verloren'] as const;
-export type DealPhase = (typeof DEAL_PHASES)[number];
-
-// Phasen, die noch zur offenen Pipeline zählen (Gewonnen/Verloren sind abgeschlossen und
-// fließen nicht mehr in die gewichtete/ungewichtete Pipeline-Summe ein).
-export const OPEN_DEAL_PHASES: DealPhase[] = ['Lead', 'Qualifiziert', 'Angebot', 'Verhandlung'];
-
-// Eine Verkaufschance in der Vertriebspipeline.
-export interface Deal {
+// Eine einzelne Zeile aus dem monatlich importierten Kundenaktivitätenjournal (CRM-Export).
+// Die aktuelle Vertriebsphase eines Kunden wird NICHT hier gespeichert, sondern aus der
+// jeweils neuesten Aktivität pro Kunden-Nr. abgeleitet (siehe lib/salesFunnel.ts) - der
+// Import liefert bei jedem Hochladen die komplette Historie neu, nicht nur neue Zeilen.
+export interface SalesActivity {
   id: string;
-  name: string;
-  customerName: string;
-  phase: DealPhase;
-  volume: number;
-  // Abschlusswahrscheinlichkeit in Prozent (0-100), abhängig von der Phase voreingestellt,
-  // aber pro Opportunity einzeln anpassbar.
-  probability: number;
-  expectedCloseDateStr: string;
-  createdAt: number;
+  activityDate: number;
+  // Rohe Aktivitätsbezeichnung aus dem Export (z.B. "Richtpreisangebot", "Präsentation
+  // online", "K U N D E") - die Zuordnung zu einer Funnel-Phase passiert erst beim Auswerten.
+  activityType: string;
+  customerNumber: string;
+  searchName: string;
+  // Enthält bei Richtpreisangebot/Angebot/Kunde oft einen Preis (z.B. "218.200,--"), sonst
+  // Freitext (z.B. "Demo", "Sonstige Gründe") - siehe parsePriceFromTitle in lib/salesFunnel.ts.
+  title: string;
 }
 
 export type ProjectStatus = 'aktiv' | 'pausiert' | 'abgeschlossen';
@@ -60,4 +56,5 @@ export interface AppMeta {
   id: 'singleton';
   demoSeededAt?: number;
   lastFinanceImportAt?: number;
+  lastSalesImportAt?: number;
 }

@@ -1,4 +1,4 @@
-import type { Deal, DealPhase, FinanceMonth, Project } from '../db/types';
+import type { FinanceMonth, Project, SalesActivity } from '../db/types';
 import { currentPeriodKey, shiftPeriodKey, toDateInputValue } from '../lib/date';
 import { newId } from '../db/db';
 
@@ -44,41 +44,63 @@ function buildFinanceMonths(): FinanceMonth[] {
   return months;
 }
 
-const DEAL_SEEDS: Array<{ name: string; customerName: string; phase: DealPhase; volume: number; closeInDays: number }> = [
-  { name: 'Website-Relaunch', customerName: 'Nordlicht Logistik GmbH', phase: 'Verhandlung', volume: 42000, closeInDays: 14 },
-  { name: 'ERP-Anbindung', customerName: 'Kanzlei Pfeiffer & Roth', phase: 'Angebot', volume: 68000, closeInDays: 35 },
-  { name: 'Wartungsvertrag 2027', customerName: 'Bäckerei Sonnenkorn', phase: 'Qualifiziert', volume: 15000, closeInDays: 60 },
-  { name: 'Cloud-Migration', customerName: 'Fahrrad Manufaktur Elbe', phase: 'Lead', volume: 95000, closeInDays: 100 },
-  { name: 'App-Erweiterung Modul B', customerName: 'Softwarehaus Kettner', phase: 'Verhandlung', volume: 31000, closeInDays: 9 },
-  { name: 'Prozessberatung Q3', customerName: 'Rehder Maschinenbau', phase: 'Angebot', volume: 24000, closeInDays: 28 },
-  { name: 'Support-Erweiterung', customerName: 'Mustermann GmbH', phase: 'Lead', volume: 12000, closeInDays: 75 },
-  { name: 'Datenmigration Altsystem', customerName: 'Holzwerk Trentmann', phase: 'Gewonnen', volume: 54000, closeInDays: -20 },
-  { name: 'Individualreport BI', customerName: 'Trattner Immobilien', phase: 'Verloren', volume: 18000, closeInDays: -40 },
+// Jeder Kunde bekommt eine kleine, plausible Aktivitäten-Historie - nur die JEWEILS LETZTE
+// Aktivität (kleinstes "daysAgo") bestimmt die aktuelle Phase (siehe lib/salesFunnel.ts),
+// die davor liegenden sind nur Stationen auf dem Weg dahin.
+const SALES_ACTIVITY_SEEDS: Array<{
+  customerNumber: string;
+  searchName: string;
+  daysAgo: number;
+  activityType: string;
+  title: string;
+}> = [
+  // Nordlicht Logistik GmbH - aktuell in Präsentation, frisch
+  { customerNumber: '10001', searchName: 'Nordlicht Logistik GmbH, Hamburg', daysAgo: 40, activityType: 'Interessenten-Anfrage', title: 'Anfrage Homepage' },
+  { customerNumber: '10001', searchName: 'Nordlicht Logistik GmbH, Hamburg', daysAgo: 5, activityType: 'Präsentation online', title: 'Demo' },
+
+  // Kanzlei Pfeiffer & Roth - aktuell im Angebot
+  { customerNumber: '10002', searchName: 'Kanzlei Pfeiffer & Roth, Köln', daysAgo: 55, activityType: 'Erstgespräch Online/Telefonisch', title: 'Telefontermin' },
+  { customerNumber: '10002', searchName: 'Kanzlei Pfeiffer & Roth, Köln', daysAgo: 30, activityType: 'Präsentation online', title: 'Online-Präsentation' },
+  { customerNumber: '10002', searchName: 'Kanzlei Pfeiffer & Roth, Köln', daysAgo: 12, activityType: 'Angebot', title: '68.000,-' },
+
+  // Bäckerei Sonnenkorn - Richtpreisangebot, hängt schon länger
+  { customerNumber: '10003', searchName: 'Bäckerei Sonnenkorn, Freiburg', daysAgo: 60, activityType: 'Präsentation online', title: 'Demo' },
+  { customerNumber: '10003', searchName: 'Bäckerei Sonnenkorn, Freiburg', daysAgo: 45, activityType: 'Richtpreisangebot', title: '15.000,-' },
+
+  // Fahrrad Manufaktur Elbe - ganz frische Anfrage
+  { customerNumber: '10004', searchName: 'Fahrrad Manufaktur Elbe, Dresden', daysAgo: 3, activityType: 'Interessenten-Anfrage', title: 'Anfrage Mail' },
+
+  // Softwarehaus Kettner - Angebot liegt schon sehr lange
+  { customerNumber: '10005', searchName: 'Softwarehaus Kettner, Stuttgart', daysAgo: 90, activityType: 'Präsentation online', title: 'Demo' },
+  { customerNumber: '10005', searchName: 'Softwarehaus Kettner, Stuttgart', daysAgo: 60, activityType: 'Angebot', title: '31.000,-' },
+
+  // Rehder Maschinenbau - Präsentation, mittlere Wartezeit
+  { customerNumber: '10006', searchName: 'Rehder Maschinenbau, Bielefeld', daysAgo: 35, activityType: 'Interessenten-Anfrage', title: 'per Telefon' },
+  { customerNumber: '10006', searchName: 'Rehder Maschinenbau, Bielefeld', daysAgo: 20, activityType: 'Präsentation online', title: 'Online Präsentation' },
+
+  // Mustermann GmbH - seit der ersten Anfrage passiert nichts mehr (Warnsignal)
+  { customerNumber: '10007', searchName: 'Mustermann GmbH, Leipzig', daysAgo: 80, activityType: 'Interessenten-Anfrage', title: 'Anfrage Homepage' },
+
+  // Holzwerk Trentmann - gewonnen
+  { customerNumber: '10008', searchName: 'Holzwerk Trentmann, Rostock', daysAgo: 140, activityType: 'Richtpreisangebot', title: '54.000,-' },
+  { customerNumber: '10008', searchName: 'Holzwerk Trentmann, Rostock', daysAgo: 100, activityType: 'Angebot', title: '54.000,-' },
+  { customerNumber: '10008', searchName: 'Holzwerk Trentmann, Rostock', daysAgo: 90, activityType: 'K U N D E', title: '54.000,-' },
+
+  // Trattner Immobilien - verloren
+  { customerNumber: '10009', searchName: 'Trattner Immobilien, Graz', daysAgo: 70, activityType: 'Angebot', title: '18.000,-' },
+  { customerNumber: '10009', searchName: 'Trattner Immobilien, Graz', daysAgo: 25, activityType: 'Lost Order', title: 'Sonstige Gründe' },
 ];
 
-function buildDeals(): Deal[] {
+function buildSalesActivities(): SalesActivity[] {
   const now = Date.now();
-  return DEAL_SEEDS.map((seed) => {
-    const closeDate = new Date(now + seed.closeInDays * 24 * 60 * 60 * 1000);
-    const probabilityByPhase: Record<DealPhase, number> = {
-      Lead: 10,
-      Qualifiziert: 25,
-      Angebot: 50,
-      Verhandlung: 75,
-      Gewonnen: 100,
-      Verloren: 0,
-    };
-    return {
-      id: newId(),
-      name: seed.name,
-      customerName: seed.customerName,
-      phase: seed.phase,
-      volume: seed.volume,
-      probability: probabilityByPhase[seed.phase],
-      expectedCloseDateStr: toDateInputValue(closeDate),
-      createdAt: now - rnd(5, 90) * 24 * 60 * 60 * 1000,
-    };
-  });
+  return SALES_ACTIVITY_SEEDS.map((seed) => ({
+    id: newId(),
+    activityDate: now - seed.daysAgo * 24 * 60 * 60 * 1000,
+    activityType: seed.activityType,
+    customerNumber: seed.customerNumber,
+    searchName: seed.searchName,
+    title: seed.title,
+  }));
 }
 
 const PROJECT_SEEDS: Array<{
@@ -113,10 +135,10 @@ function buildProjects(): Project[] {
   }));
 }
 
-export function buildDemoData(): { financeMonths: FinanceMonth[]; deals: Deal[]; projects: Project[] } {
+export function buildDemoData(): { financeMonths: FinanceMonth[]; salesActivities: SalesActivity[]; projects: Project[] } {
   return {
     financeMonths: buildFinanceMonths(),
-    deals: buildDeals(),
+    salesActivities: buildSalesActivities(),
     projects: buildProjects(),
   };
 }

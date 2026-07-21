@@ -1,56 +1,71 @@
+import { Link } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
-import { DEAL_PHASES } from '../db/types'
-import { unweightedPipeline, weightedPipeline } from '../lib/sales'
-import { formatCurrency, formatCurrencyCompact } from '../lib/format'
-import { formatDate } from '../lib/date'
+import { computeCustomerFunnelStatuses, groupByPhase, FUNNEL_PHASES, FUNNEL_PHASE_LABELS } from '../lib/salesFunnel'
+import { formatCurrency } from '../lib/format'
+import { describeSalesDataStatus } from '../lib/dataStatus'
+
+// Ab so vielen Tagen ohne neue Aktivität gilt ein Kunde als "hängengeblieben" und wird farblich
+// hervorgehoben - ein fester Richtwert, unabhängig von der Phase.
+const STALE_THRESHOLD_DAYS = 30
 
 export default function SalesPage() {
-  const deals = useLiveQuery(() => db.deals.toArray(), [])
-  if (!deals) return null
+  const activities = useLiveQuery(() => db.salesActivities.toArray(), [])
+  const appMeta = useLiveQuery(() => db.appMeta.get('singleton'), [])
+  if (!activities) return null
+
+  const statuses = computeCustomerFunnelStatuses(activities)
+  const grouped = groupByPhase(statuses)
+  const openCount = FUNNEL_PHASES.filter((p) => p !== 'kunde').reduce((sum, p) => sum + grouped[p].length, 0)
+  const staleCount = statuses.filter((s) => s.phase !== 'kunde' && s.phase !== 'verloren' && s.daysSinceLastActivity > STALE_THRESHOLD_DAYS).length
 
   return (
     <div className="page">
       <p className="screen-eyebrow">Vertrieb</p>
-      <h1>Pipeline</h1>
+      <div className="page-header-row">
+        <h1>Pipeline</h1>
+        <Link to="/vertrieb/import" className="secondary-button">
+          Importieren
+        </Link>
+      </div>
+      <p className="data-status">Datenstand: {describeSalesDataStatus(appMeta)}</p>
 
       <div className="kpi-grid">
         <div className="kpi-card kpi-card-primary">
-          <span className="kpi-label">Gewichtete Pipeline</span>
-          <span className="kpi-value">{formatCurrency(weightedPipeline(deals))}</span>
-          <p className="kpi-sub">von {formatCurrency(unweightedPipeline(deals))} offenem Volumen</p>
+          <span className="kpi-label">Offene Interessenten</span>
+          <span className="kpi-value">{openCount}</span>
+          <p className="kpi-sub">
+            {staleCount > 0 ? (
+              <span className="kpi-delta down">{staleCount} seit über {STALE_THRESHOLD_DAYS} Tagen ohne Fortschritt</span>
+            ) : (
+              'alle Kunden kürzlich bewegt'
+            )}
+          </p>
         </div>
       </div>
 
-      {deals.length === 0 && <p className="hint">Noch keine Verkaufschancen angelegt.</p>}
+      {activities.length === 0 && <p className="hint">Noch kein Aktivitätenjournal importiert.</p>}
 
-      {DEAL_PHASES.map((phase) => {
-        const phaseDeals = deals.filter((d) => d.phase === phase)
-        if (phaseDeals.length === 0) return null
-        const phaseVolume = phaseDeals.reduce((sum, d) => sum + d.volume, 0)
-
+      {FUNNEL_PHASES.map((phase) => {
+        const customers = grouped[phase]
+        if (customers.length === 0) return null
         return (
           <div key={phase} className="group-section">
             <div className="group-section-title">
-              <span>
-                {phase} · {phaseDeals.length}
-              </span>
-              <span className="num">{formatCurrencyCompact(phaseVolume)}</span>
+              <span>{FUNNEL_PHASE_LABELS[phase]} · {customers.length}</span>
             </div>
             <div className="card-list">
-              {phaseDeals.map((deal) => (
-                <div key={deal.id} className="card">
+              {customers.map((c) => (
+                <div key={c.customerNumber} className="card">
                   <div>
-                    <span className="card-title">{deal.name}</span>
-                    <span className="card-subtitle">{deal.customerName}</span>
+                    <span className="card-title">{c.searchName || c.customerNumber}</span>
+                    <span className="card-subtitle">{c.rawActivityType}</span>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <span className="num" style={{ fontWeight: 600, display: 'block' }}>
-                      {formatCurrencyCompact(deal.volume)}
+                    <span className={`num ${c.daysSinceLastActivity > STALE_THRESHOLD_DAYS ? 'hint-error' : ''}`} style={{ fontWeight: 600, display: 'block' }}>
+                      {c.daysSinceLastActivity} Tage
                     </span>
-                    <span className="kpi-sub">
-                      {deal.probability} % · {formatDate(new Date(`${deal.expectedCloseDateStr}T00:00:00`).getTime())}
-                    </span>
+                    {c.price !== null && <span className="kpi-sub">{formatCurrency(c.price)}</span>}
                   </div>
                 </div>
               ))}
@@ -58,6 +73,47 @@ export default function SalesPage() {
           </div>
         )
       })}
+
+      {grouped.verloren.length > 0 && (
+        <div className="group-section">
+          <div className="group-section-title">
+            <span>Verloren · {grouped.verloren.length}</span>
+          </div>
+          <div className="card-list">
+            {grouped.verloren.map((c) => (
+              <div key={c.customerNumber} className="card">
+                <div>
+                  <span className="card-title">{c.searchName || c.customerNumber}</span>
+                  <span className="card-subtitle">{c.title}</span>
+                </div>
+                <span className="kpi-sub">{c.daysSinceLastActivity} Tage her</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {grouped.unbekannt.length > 0 && (
+        <div className="group-section">
+          <div className="group-section-title">
+            <span>Unbekannte Aktivitäten · {grouped.unbekannt.length}</span>
+          </div>
+          <p className="hint">
+            Diese Kunden haben eine Aktivitätsbezeichnung, die keiner Phase zugeordnet werden
+            konnte - vermutlich hat sich das Journal-Format geändert.
+          </p>
+          <div className="card-list">
+            {grouped.unbekannt.map((c) => (
+              <div key={c.customerNumber} className="card">
+                <div>
+                  <span className="card-title">{c.searchName || c.customerNumber}</span>
+                  <span className="card-subtitle">{c.rawActivityType}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
